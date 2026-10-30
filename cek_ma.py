@@ -14,15 +14,22 @@ def kirim_chat_telegram(pesan):
         print("Error: TELEGRAM_USER belum diatur di GitHub Secrets!")
         return
     
-    pesan_url = urllib.parse.quote_plus(pesan)
-    url = f"https://api.callmebot.com/text.php?user={TELEGRAM_USER}&text={pesan_url}"
+    # Mengganti baris baru (\n) dengan pemisah spasi agar tidak terkena 403 Forbidden di Apache CallMeBot
+    pesan_satu_baris = pesan.replace("\n", " | ")
+    pesan_url = urllib.parse.quote(pesan_satu_baris)
+    url = f"http://api.callmebot.com/text.php?user={TELEGRAM_USER}&text={pesan_url}"
+    
+    # Menyamarkan Python sebagai browser Chrome biasa agar tidak diblokir firewall
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+    }
     
     try:
-        r = requests.get(url, timeout=15)
+        r = requests.get(url, headers=headers, timeout=15)
         if r.status_code == 200 and "Message sent" in r.text:
             print("✅ Pesan chat Telegram berhasil dikirim!")
         else:
-            print("Respons server:", r.text[:200])
+            print(f"Status: {r.status_code} | Respons server:", r.text[:250])
     except Exception as e:
         print("Gagal mengirim chat Telegram:", e)
 
@@ -53,43 +60,25 @@ def main():
 
         if ma44_lalu <= ma332_lalu and ma44_skrg > ma332_skrg:
             print(">>> GOLDEN CROSS TERDETEKSI!")
-            pesan = (
-                f"🟢 SINYAL BUY GOLD (XAUUSD M5)\n"
-                f"MA 44 memotong ke atas MA 332\n"
-                f"Harga: {harga_close:.2f}\n"
-                f"MA 44: {ma44_skrg:.2f} | MA 332: {ma332_skrg:.2f}"
-            )
+            pesan = f"🟢 SINYAL BUY GOLD M5 | MA44 potong atas MA332 | Harga: {harga_close:.2f} | MA44: {ma44_skrg:.2f} | MA332: {ma332_skrg:.2f}"
             kirim_chat_telegram(pesan)
             sinyal_ditemukan = True
             break
         elif ma44_lalu >= ma332_lalu and ma44_skrg < ma332_skrg:
             print(">>> DEATH CROSS TERDETEKSI!")
-            pesan = (
-                f"🔴 SINYAL SELL GOLD (XAUUSD M5)\n"
-                f"MA 44 memotong ke bawah MA 332\n"
-                f"Harga: {harga_close:.2f}\n"
-                f"MA 44: {ma44_skrg:.2f} | MA 332: {ma332_skrg:.2f}"
-            )
+            pesan = f"🔴 SINYAL SELL GOLD M5 | MA44 potong bawah MA332 | Harga: {harga_close:.2f} | MA44: {ma44_skrg:.2f} | MA332: {ma332_skrg:.2f}"
             kirim_chat_telegram(pesan)
             sinyal_ditemukan = True
             break
 
-    # Bagian ini akan mengirim chat rutin setiap 5 menit meskipun belum bersilangan
     if not sinyal_ditemukan:
         harga_terakhir = df['Close'].iloc[-2]
         ma44_terakhir = df['MA44'].iloc[-2]
         ma332_terakhir = df['MA332'].iloc[-2]
         selisih = abs(ma44_terakhir - ma332_terakhir)
-        posisi = "MA44 di ATAS MA332 (Tren Naik)" if ma44_terakhir > ma332_terakhir else "MA44 di BAWAH MA332 (Tren Turun)"
+        posisi = "Tren Naik" if ma44_terakhir > ma332_terakhir else "Tren Turun"
 
-        pesan_rutin = (
-            f"📊 Update Gold M5 (Belum Cross)\n"
-            f"Harga: {harga_terakhir:.2f}\n"
-            f"MA 44: {ma44_terakhir:.2f}\n"
-            f"MA 332: {ma332_terakhir:.2f}\n"
-            f"Jarak: {selisih:.2f} poin\n"
-            f"Status: {posisi}"
-        )
+        pesan_rutin = f"📊 Update Gold M5 | Harga: {harga_terakhir:.2f} | MA44: {ma44_terakhir:.2f} | MA332: {ma332_terakhir:.2f} | Jarak: {selisih:.2f} ({posisi})"
         print("Mengirim laporan rutin 5 menit ke Telegram...")
         kirim_chat_telegram(pesan_rutin)
 
