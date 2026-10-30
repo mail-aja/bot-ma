@@ -14,6 +14,7 @@ def panggil_telegram(pesan):
     try:
         r = requests.get(url, timeout=15)
         print(f"Panggilan dipicu! Status: {r.status_code}")
+        print("Jawaban Server CallMeBot:", r.text) # Menampilkan alasan jika telepon gagal
     except Exception as e:
         print("Gagal memanggil Telegram:", e)
 
@@ -25,15 +26,12 @@ def main():
         print("Data tidak cukup untuk menghitung MA 332.")
         return
 
-    # Meratakan kolom jika berbentuk MultiIndex
     if isinstance(df.columns, pd.MultiIndex):
         df.columns = df.columns.get_level_values(0)
 
     df['MA44'] = df['Close'].rolling(window=44).mean()
     df['MA332'] = df['Close'].rolling(window=332).mean()
 
-    # Mengecek 2 candle terakhir yang sudah ditutup (index -2 dan -3)
-    # untuk mengantisipasi jika jadwal GitHub Actions sedikit terlambat
     sinyal_ditemukan = False
     for i in [-2, -3]:
         ma44_lalu = df['MA44'].iloc[i - 1]
@@ -57,9 +55,6 @@ def main():
 
     if not sinyal_ditemukan:
         print("Belum ada persilangan MA44 dan MA332.")
-
-if __name__ == "__main__":
-    main()
 
 if __name__ == "__main__":
     panggil_telegram("Tes panggilan bot Gold berhasil")
