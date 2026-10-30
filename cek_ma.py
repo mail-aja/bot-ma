@@ -1,22 +1,31 @@
 import os
+import warnings
 import yfinance as yf
 import pandas as pd
 import requests
+import urllib.parse
+
+warnings.filterwarnings("ignore")
 
 TELEGRAM_USER = os.environ.get("TELEGRAM_USER")
 
-def panggil_telegram(pesan):
+def kirim_chat_telegram(pesan):
     if not TELEGRAM_USER:
         print("Error: TELEGRAM_USER belum diatur di GitHub Secrets!")
         return
-    pesan_url = pesan.replace(" ", "+")
-    url = f"http://api.callmebot.com/start.php?user={TELEGRAM_USER}&text={pesan_url}&lang=id-ID-Standard-A&rpt=2"
+    
+    # Mengubah teks pesan agar aman dikirim lewat URL
+    pesan_url = urllib.parse.quote_plus(pesan)
+    url = f"https://api.callmebot.com/text.php?user={TELEGRAM_USER}&text={pesan_url}"
+    
     try:
         r = requests.get(url, timeout=15)
-        print(f"Panggilan dipicu! Status: {r.status_code}")
-        print("Jawaban Server CallMeBot:", r.text) # Menampilkan alasan jika telepon gagal
+        if r.status_code == 200 and "Message sent" in r.text:
+            print("✅ Pesan chat Telegram berhasil dikirim!")
+        else:
+            print("Respons server:", r.text[:200])
     except Exception as e:
-        print("Gagal memanggil Telegram:", e)
+        print("Gagal mengirim chat Telegram:", e)
 
 def main():
     print("Mengambil data Gold (XAUUSD / GC=F) timeframe 5m...")
@@ -38,18 +47,33 @@ def main():
         ma332_lalu = df['MA332'].iloc[i - 1]
         ma44_skrg = df['MA44'].iloc[i]
         ma332_skrg = df['MA332'].iloc[i]
+        harga_close = df['Close'].iloc[i]
         waktu = df.index[i]
 
-        print(f"[{waktu}] MA44: {ma44_skrg:.2f} | MA332: {ma332_skrg:.2f}")
+        print(f"[{waktu}] Close: {harga_close:.2f} | MA44: {ma44_skrg:.2f} | MA332: {ma332_skrg:.2f}")
 
         if ma44_lalu <= ma332_lalu and ma44_skrg > ma332_skrg:
             print(">>> GOLDEN CROSS TERDETEKSI!")
-            panggil_telegram("Sinyal Buy Gold. MA 44 memotong ke atas MA 332.")
+            pesan = (
+                f"🟢 SINYAL BUY GOLD (XAUUSD M5)\n"
+                f"MA 44 memotong ke atas MA 332\n"
+                f"Harga Close: {harga_close:.2f}\n"
+                f"MA 44: {ma44_skrg:.2f}\n"
+                f"MA 332: {ma332_skrg:.2f}"
+            )
+            kirim_chat_telegram(pesan)
             sinyal_ditemukan = True
             break
         elif ma44_lalu >= ma332_lalu and ma44_skrg < ma332_skrg:
             print(">>> DEATH CROSS TERDETEKSI!")
-            panggil_telegram("Sinyal Sell Gold. MA 44 memotong ke bawah MA 332.")
+            pesan = (
+                f"🔴 SINYAL SELL GOLD (XAUUSD M5)\n"
+                f"MA 44 memotong ke bawah MA 332\n"
+                f"Harga Close: {harga_close:.2f}\n"
+                f"MA 44: {ma44_skrg:.2f}\n"
+                f"MA 332: {ma332_skrg:.2f}"
+            )
+            kirim_chat_telegram(pesan)
             sinyal_ditemukan = True
             break
 
@@ -57,5 +81,6 @@ def main():
         print("Belum ada persilangan MA44 dan MA332.")
 
 if __name__ == "__main__":
-    panggil_telegram("Tes panggilan bot Gold berhasil")
+    # Baris tes chat (hapus tanda # di bawah jika ingin mengetes pesan masuk):
+    kirim_chat_telegram("✅ Tes Bot Gold: Notifikasi chat MA 44 x MA 332 sudah aktif!")
     main()
