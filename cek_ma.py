@@ -60,3 +60,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+if __name__ == "__main__":
+    panggil_telegram("Tes panggilan bot Gold berhasil")
+    main()
