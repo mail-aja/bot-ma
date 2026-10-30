@@ -14,7 +14,6 @@ def kirim_chat_telegram(pesan):
         print("Error: TELEGRAM_USER belum diatur di GitHub Secrets!")
         return
     
-    # Mengubah teks pesan agar aman dikirim lewat URL
     pesan_url = urllib.parse.quote_plus(pesan)
     url = f"https://api.callmebot.com/text.php?user={TELEGRAM_USER}&text={pesan_url}"
     
@@ -57,9 +56,8 @@ def main():
             pesan = (
                 f"🟢 SINYAL BUY GOLD (XAUUSD M5)\n"
                 f"MA 44 memotong ke atas MA 332\n"
-                f"Harga Close: {harga_close:.2f}\n"
-                f"MA 44: {ma44_skrg:.2f}\n"
-                f"MA 332: {ma332_skrg:.2f}"
+                f"Harga: {harga_close:.2f}\n"
+                f"MA 44: {ma44_skrg:.2f} | MA 332: {ma332_skrg:.2f}"
             )
             kirim_chat_telegram(pesan)
             sinyal_ditemukan = True
@@ -69,18 +67,31 @@ def main():
             pesan = (
                 f"🔴 SINYAL SELL GOLD (XAUUSD M5)\n"
                 f"MA 44 memotong ke bawah MA 332\n"
-                f"Harga Close: {harga_close:.2f}\n"
-                f"MA 44: {ma44_skrg:.2f}\n"
-                f"MA 332: {ma332_skrg:.2f}"
+                f"Harga: {harga_close:.2f}\n"
+                f"MA 44: {ma44_skrg:.2f} | MA 332: {ma332_skrg:.2f}"
             )
             kirim_chat_telegram(pesan)
             sinyal_ditemukan = True
             break
 
+    # Bagian ini akan mengirim chat rutin setiap 5 menit meskipun belum bersilangan
     if not sinyal_ditemukan:
-        print("Belum ada persilangan MA44 dan MA332.")
+        harga_terakhir = df['Close'].iloc[-2]
+        ma44_terakhir = df['MA44'].iloc[-2]
+        ma332_terakhir = df['MA332'].iloc[-2]
+        selisih = abs(ma44_terakhir - ma332_terakhir)
+        posisi = "MA44 di ATAS MA332 (Tren Naik)" if ma44_terakhir > ma332_terakhir else "MA44 di BAWAH MA332 (Tren Turun)"
+
+        pesan_rutin = (
+            f"📊 Update Gold M5 (Belum Cross)\n"
+            f"Harga: {harga_terakhir:.2f}\n"
+            f"MA 44: {ma44_terakhir:.2f}\n"
+            f"MA 332: {ma332_terakhir:.2f}\n"
+            f"Jarak: {selisih:.2f} poin\n"
+            f"Status: {posisi}"
+        )
+        print("Mengirim laporan rutin 5 menit ke Telegram...")
+        kirim_chat_telegram(pesan_rutin)
 
 if __name__ == "__main__":
-    # Baris tes chat (hapus tanda # di bawah jika ingin mengetes pesan masuk):
-    kirim_chat_telegram("✅ Tes Bot Gold: Notifikasi chat MA 44 x MA 332 sudah aktif!")
     main()
