@@ -1,0 +1,27 @@
+name: Bot Pemantau MA Gold
+
+on:
+  schedule:
+    # Jalan setiap 5 menit pada hari Senin sampai Jumat (Saat market Gold buka)
+    - cron: '*/5 * * * 1-5'
+  workflow_dispatch: # Memungkinkan kita mengetes tombol Run secara manual
+
+jobs:
+  cek_sinyal:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ambil Kode dari Repository
+        uses: actions/checkout@v4
+
+      - name: Siapkan Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Instal Library
+        run: pip install yfinance pandas requests
+
+      - name: Jalankan Script Pemantau MA
+        env:
+          TELEGRAM_USER: ${{ secrets.TELEGRAM_USER }}
+        run: python cek_ma.py
